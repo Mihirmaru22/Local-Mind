@@ -6,9 +6,11 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.parent
 PDF_DIR = BASE_DIR / "pdfs"
 DB_DIR = BASE_DIR / "chroma_db_local"
+LOGS_DIR = BASE_DIR / "logs"
+CHAT_HISTORY_DIR = BASE_DIR / "chat_history"
 
 # Models
-MAIN_MODEL = os.getenv("MAIN_MODEL", "qwen2.5:7b") 
+MAIN_MODEL = os.getenv("MAIN_MODEL", "qwen2.5:7b")
 UTILITY_MODEL = "qwen3:1.7b"
 EMBEDDING_MODEL = "nomic-embed-text"
 

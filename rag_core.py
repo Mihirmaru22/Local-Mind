@@ -18,6 +18,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from mem0 import Memory
 from operator import itemgetter
+from observability.file_tracker import build_chunk_tracking_entry, initialize_chunk_tracking_report, save_chunk_tracking_report
 
 # Configure Mem0 to use local Ollama (Prevents OpenAI API key errors)
 from mem0 import Memory
@@ -343,7 +344,11 @@ def ingest_documents():
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
         
         total_chunks = 0
-        for idx, file_path in enumerate(pdf_files):
+        tracked_files = []
+        initialize_chunk_tracking_report()
+        print(" Tracking report initialized at logs/chunked_files.json")
+        for idx, file_path in enumerate(pdf_files, start=1):
+            print(f" Processing [{idx}/{len(pdf_files)}]: {file_path.name}")
             try:
                 docs = hybrid_pdf_parser(file_path)
                 processed_docs = []
@@ -355,21 +360,45 @@ def ingest_documents():
                         
                 vectorstore.add_documents(processed_docs)
                 total_chunks += len(processed_docs)
-                print(f" Indexed {file_path.name}")
+                tracked_files.append(build_chunk_tracking_entry(file_path, docs, processed_docs))
+                save_chunk_tracking_report(tracked_files, status="in_progress")
+                print(f" Indexed {file_path.name} | chars={tracked_files[-1]['characters_extracted']} | chunks={tracked_files[-1]['chunks_created']}")
                 
                 # Log performance every 5 files
-                if (idx + 1) % 5 == 0:
-                    log_system_performance(f"ingestion_file_{idx+1}")
+                if idx % 5 == 0:
+                    log_system_performance(f"ingestion_file_{idx}")
                 
                 gc.collect() 
             except Exception as e:
                 print(f"  Skipping {file_path.name}: {e}")
                 
+        save_chunk_tracking_report(tracked_files, status="completed")
+        print(" Chunk tracking saved to logs/chunked_files.json")
         metrics["num_pdfs"] = len(pdf_files)
         metrics["num_chunks"] = total_chunks
         print(" Ingestion Complete!")
     else:
         print(" Loading existing Vector DB...")
+        pdf_files = list(PDF_DIR.glob("*.pdf"))
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
+        tracked_files = []
+        initialize_chunk_tracking_report()
+        print(" Tracking report initialized at logs/chunked_files.json")
+        for idx, file_path in enumerate(pdf_files, start=1):
+            print(f" Processing [{idx}/{len(pdf_files)}]: {file_path.name}")
+            try:
+                docs = hybrid_pdf_parser(file_path)
+                processed_docs = []
+                for doc in docs:
+                    if doc.metadata["type"] == "text":
+                        processed_docs.extend(text_splitter.split_documents([doc]))
+                    else:
+                        processed_docs.append(doc)
+                tracked_files.append(build_chunk_tracking_entry(file_path, docs, processed_docs))
+                save_chunk_tracking_report(tracked_files, status="cached")
+                print(f" Tracked {file_path.name} | chars={tracked_files[-1]['characters_extracted']} | chunks={tracked_files[-1]['chunks_created']}")
+            except Exception as e:
+                print(f"  Tracking skip {file_path.name}: {e}")
         metrics["num_pdfs"] = "N/A (Cached)"
         metrics["num_chunks"] = "N/A (Cached)"
         vectorstore = Chroma(persist_directory=str(DB_DIR), embedding_function=embeddings)
@@ -397,17 +426,111 @@ vectorstore = ingest_documents()
 retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 4, "fetch_k": 15})
 
 # RELAXED PROMPT: Allows the bot to synthesize broad/vague questions instead of failing
-prompt = ChatPromptTemplate.from_template("""
-You are an elite enterprise compliance and financial analyst. 
-Analyze the provided documents and conversation history to answer the user's question.
+prompt = ChatPromptTemplate.from_template("""/no_think
+You are an AI assistant operating in a Retrieval-Augmented Generation (RAG) system.
 
-RULES:
-1. Quote exact numbers, dates, and names whenever available.
-2. If the data is in a Markdown table, show your calculation steps.
-3. Base your answer primarily on the provided <document> tags. 
-4. If the user asks a vague or broad question (e.g., "summarize the other report", "what are the risks?"), synthesize the available information from the context to provide a helpful, comprehensive answer. Do not just say "I cannot find it" if there is relevant information.
-5. Only reply "I cannot find this information" if the provided <document> tags are completely unrelated to the user's question.
-6. Cite the source file and page number at the end.
+PRIMARY OBJECTIVE
+
+Your primary source of truth is the provided retrieved context. Use it to answer the user's question accurately, clearly, and helpfully.
+
+CORE RULES
+
+1. Ground answers in retrieved context.
+
+   * Use the retrieved documents as the main source of information.
+   * Extract facts, concepts, procedures, and details from the retrieved content.
+   * Do not invent information that is not supported by the retrieved context.
+
+2. Explain, don't just repeat.
+
+   * Do not copy document text unless necessary.
+   * Rewrite information in a natural, easy-to-understand way.
+   * Adapt explanations to the user's level of understanding.
+   * If the user asks for a beginner explanation, simplify the concepts.
+   * If the user asks for a technical explanation, provide appropriate depth.
+
+3. Use examples when helpful.
+
+   * If the retrieved content describes a concept, process, or system, you may create illustrative examples to help understanding.
+   * Examples must be clearly presented as examples and must not introduce unsupported factual claims.
+   * Real-world analogies are encouraged when they improve clarity.
+
+4. Answer the user's intent, not just the words.
+
+   * Focus on what the user is trying to understand or accomplish.
+   * User's greeting should be answered politely and enthusiastically, make user feel welcome and comfertable to ask their quetions.
+   * Combine relevant information from multiple retrieved sources when appropriate.
+   * Provide structured and complete answers.
+
+5. Handle missing information honestly.
+
+   * If the answer cannot be found in the retrieved context, say so clearly.
+   * Do not guess.
+   * Do not fabricate details.
+   * Example:
+     "I couldn't find information about that in the provided documents."
+
+6. Separate document facts from general knowledge.
+
+   * When a user asks something partially covered by documents and partially outside them:
+
+     * First provide the document-supported answer.
+     * Then clearly label any additional general knowledge.
+   * Never present unsupported information as if it came from the documents.
+
+7. Reduce hallucinations.
+
+   * Never invent names, numbers, dates, specifications, requirements, procedures, policies, or technical details.
+   * If uncertain, acknowledge uncertainty.
+   * Prefer saying "I don't know" over making assumptions.
+
+8. Preserve important details.
+
+   * Keep critical numbers, configurations, requirements, versions, limitations, and constraints exactly as stated in the retrieved content.
+
+9. Response style.
+
+   * Be concise for simple questions.
+   * Be detailed for complex questions.
+   * Use bullet points, tables, and step-by-step explanations when useful.
+   * Prioritize clarity and readability.
+   * Complete answers are necessary, but do not add unsupported information just to be more comprehensive.
+   * If the user asks multiple things in one question, answer every part.
+
+10. Contradictory information.
+
+    * If retrieved sources conflict:
+
+      * Mention the conflict.
+      * Explain the differing information.
+      * Do not arbitrarily choose one unless evidence supports it.
+
+11. Follow-up questions.
+
+    * Use conversation history when available.
+    * Maintain context across the conversation.
+    * Ask clarifying questions when the user's request is ambiguous.
+
+RESPONSE WORKFLOW
+
+Step 1: Understand the user's intent.
+Step 2: Search the retrieved context for relevant information.
+Step 3: Determine whether the answer is fully supported, partially supported, or unsupported.
+Step 4: Generate a clear and helpful response.
+Step 5: If information is missing, explicitly state the limitation.
+Step 6: Add examples or simplified explanations when they improve understanding.
+Step 7: Verify that no unsupported claims are presented as facts.
+
+IMPORTANT
+
+* Retrieved documents are the primary source of truth.
+* Helpful explanation is encouraged.
+* Hallucination is not allowed.
+* If the answer is not in the documents, say so.
+* Explain concepts naturally rather than quoting documents verbatim.
+* Prioritize accuracy over completeness when evidence is insufficient.
+
+Use retrieved documents as the source of facts, but use your reasoning abilities to explain, summarize, compare, teach, and reorganize those facts in the most useful way for the user.
 
 <memory>
 {memory}
