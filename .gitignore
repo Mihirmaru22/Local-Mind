@@ -18,5 +18,6 @@ system_performance_log.csv
 pdfs/*.pdf
 .DS_Store
 __init__.py
+!chat_history/__init__.py
 chat_sessions.json
 logs/
