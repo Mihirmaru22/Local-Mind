@@ -1,18 +1,21 @@
+# Create the .gitignore file and add the rules
+cat << 'EOF' > .gitignore
+# Virtual Environment
+LOCAL_MIND/
 .venv/
 venv/
+
+# Python Cache
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-.env
-.env.*
-pdfs/
-*.pdf
+*$py.class
+*.so
+
+# Generated Databases (Never commit these!)
 chroma_db_local/
 mem0_qdrant_data/
-*.log
-query_performance_log.csv
-rag_metrics_log.csv
-system_performance_log.csv
-pdfs/*.pdf
+
+# OS Files
 .DS_Store
+Thumbs.db
+EOF
