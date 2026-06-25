@@ -11,7 +11,7 @@ def get_rag_chain(model_name: str = None):
         model=target_model, 
         temperature=0, 
         num_ctx=4096, 
-        keep_alive="15m", 
+        keep_alive="10m", 
         base_url=OLLAMA_HOST,
         # THIS is where you disable thinking for maximum speed
         options={"think": False} 

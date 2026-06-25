@@ -1,0 +1,153 @@
+{
+  "generated_at": "2026-06-24T10:32:04+00:00",
+  "status": "completed",
+  "file_count": 0,
+  "total_characters_extracted": 0,
+  "total_chunks_created": 0,
+  "files": [],
+  "embedding_files": [
+    {
+      "file_name": "report 2.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/report 2.pdf",
+      "file_size_bytes": 444898,
+      "chunk_count": 50,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T08:51:41+00:00",
+      "embedding_end_time": "2026-06-24T08:52:57+00:00",
+      "embedding_duration_ms": 76103,
+      "status": "failed"
+    },
+    {
+      "file_name": "man's-search-for-meaning.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/man's-search-for-meaning.pdf",
+      "file_size_bytes": 781304,
+      "chunk_count": 271,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T08:52:57+00:00",
+      "embedding_end_time": "2026-06-24T08:58:59+00:00",
+      "embedding_duration_ms": 362038,
+      "status": "failed"
+    },
+    {
+      "file_name": "PDF RAG Platform Architecture Analysis.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/PDF RAG Platform Architecture Analysis.pdf",
+      "file_size_bytes": 670303,
+      "chunk_count": 60,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T08:58:59+00:00",
+      "embedding_end_time": "2026-06-24T09:00:30+00:00",
+      "embedding_duration_ms": 90896,
+      "status": "failed"
+    },
+    {
+      "file_name": "apple.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/apple.pdf",
+      "file_size_bytes": 820116,
+      "chunk_count": 267,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T09:00:30+00:00",
+      "embedding_end_time": "2026-06-24T09:07:36+00:00",
+      "embedding_duration_ms": 426070,
+      "status": "failed"
+    },
+    {
+      "file_name": "report 2.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/report 2.pdf",
+      "file_size_bytes": 444898,
+      "chunk_count": 50,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T09:26:38+00:00",
+      "embedding_end_time": "2026-06-24T09:28:02+00:00",
+      "embedding_duration_ms": 83759,
+      "status": "failed"
+    },
+    {
+      "file_name": "report 2.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/report 2.pdf",
+      "file_size_bytes": 444898,
+      "chunk_count": 50,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T09:34:32+00:00",
+      "embedding_end_time": "2026-06-24T09:35:49+00:00",
+      "embedding_duration_ms": 77187,
+      "status": "failed"
+    },
+    {
+      "file_name": "man's-search-for-meaning.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/man's-search-for-meaning.pdf",
+      "file_size_bytes": 781304,
+      "chunk_count": 271,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T09:35:49+00:00",
+      "embedding_end_time": "2026-06-24T09:41:49+00:00",
+      "embedding_duration_ms": 360313,
+      "status": "failed"
+    },
+    {
+      "file_name": "PDF RAG Platform Architecture Analysis.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/PDF RAG Platform Architecture Analysis.pdf",
+      "file_size_bytes": 670303,
+      "chunk_count": 60,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T09:41:49+00:00",
+      "embedding_end_time": "2026-06-24T09:43:14+00:00",
+      "embedding_duration_ms": 85134,
+      "status": "failed"
+    },
+    {
+      "file_name": "apple.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/apple.pdf",
+      "file_size_bytes": 820116,
+      "chunk_count": 267,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T09:43:14+00:00",
+      "embedding_end_time": "2026-06-24T09:50:02+00:00",
+      "embedding_duration_ms": 408103,
+      "status": "failed"
+    },
+    {
+      "file_name": "man's-search-for-meaning.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/man's-search-for-meaning.pdf",
+      "file_size_bytes": 781304,
+      "chunk_count": 271,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T09:50:19+00:00",
+      "embedding_end_time": "2026-06-24T09:56:15+00:00",
+      "embedding_duration_ms": 356175,
+      "status": "failed"
+    },
+    {
+      "file_name": "apple.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/apple.pdf",
+      "file_size_bytes": 820116,
+      "chunk_count": 267,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T09:56:15+00:00",
+      "embedding_end_time": "2026-06-24T10:03:03+00:00",
+      "embedding_duration_ms": 407545,
+      "status": "failed"
+    },
+    {
+      "file_name": "man's-search-for-meaning.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/man's-search-for-meaning.pdf",
+      "file_size_bytes": 781304,
+      "chunk_count": 271,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T10:06:16+00:00",
+      "embedding_end_time": "2026-06-24T10:13:53+00:00",
+      "embedding_duration_ms": 457332,
+      "status": "failed"
+    },
+    {
+      "file_name": "apple.pdf",
+      "file_path": "/home/mihir/Local-Mind/pdfs/apple.pdf",
+      "file_size_bytes": 820116,
+      "chunk_count": 267,
+      "embedding_model": "qwen3-embedding:0.6b",
+      "embedding_start_time": "2026-06-24T10:23:27+00:00",
+      "embedding_end_time": "2026-06-24T10:32:04+00:00",
+      "embedding_duration_ms": 517749,
+      "status": "failed"
+    }
+  ]
+}
