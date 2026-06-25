@@ -17,6 +17,7 @@ from chat_history import (
     delete_chat_session,
     get_chat_session,
     load_chat_sessions,
+    rename_chat_session,
     upsert_chat_message,
 )
 
@@ -143,6 +144,214 @@ def _clear_current_chat():
     st.rerun()
 
 
+def _set_active_chat(chat_id):
+    chat = get_chat_session(chat_id)
+    if chat is None:
+        return
+    st.session_state.active_chat_id = chat_id
+    st.session_state.messages = deepcopy(chat.get("messages", []))
+    st.session_state.chat_action_chat_id = None
+    st.session_state.chat_rename_chat_id = None
+
+
+def _toggle_chat_menu(chat_id):
+    current = st.session_state.get("chat_action_chat_id")
+    st.session_state.chat_action_chat_id = None if current == chat_id else chat_id
+    if st.session_state.chat_action_chat_id != chat_id:
+        st.session_state.chat_rename_chat_id = None
+
+
+def _begin_rename_chat(chat_id):
+    chat = get_chat_session(chat_id)
+    st.session_state.chat_action_chat_id = chat_id
+    st.session_state.chat_rename_chat_id = chat_id
+    st.session_state[f"rename_title_{chat_id}"] = (chat or {}).get("title", "New Chat")
+
+
+def _save_renamed_chat(chat_id):
+    new_title = st.session_state.get(f"rename_title_{chat_id}", "").strip()
+    if not new_title:
+        return
+    rename_chat_session(chat_id, new_title)
+    st.session_state.chat_sessions = load_chat_sessions()
+    st.session_state.chat_rename_chat_id = None
+    st.session_state.chat_action_chat_id = None
+    st.rerun()
+
+
+def _delete_chat_and_select(chat_id):
+    current_active = st.session_state.get("active_chat_id")
+    sessions = delete_chat_session(chat_id)
+    if not sessions:
+        create_chat_session()
+        sessions = load_chat_sessions()
+
+    st.session_state.chat_sessions = sessions
+    if current_active != chat_id and any(session.get("id") == current_active for session in sessions):
+        next_chat_id = current_active
+    else:
+        next_chat_id = sessions[0]["id"]
+
+    st.session_state.active_chat_id = next_chat_id
+    active_chat = get_chat_session(next_chat_id)
+    st.session_state.messages = deepcopy(active_chat.get("messages", [])) if active_chat else []
+    st.session_state.chat_action_chat_id = None
+    st.session_state.chat_rename_chat_id = None
+    st.rerun()
+
+
+def _chat_menu_label(chat):
+    title = chat.get("title", "New Chat")
+    messages = chat.get("messages", [])
+    user_turns = sum(1 for msg in messages if msg.get("role") == "user")
+    updated = chat.get("updated_at", "")
+    if updated:
+        updated = updated.replace("T", " ")[:16]
+        return f"{title} · {user_turns} turns · {updated}"
+    return f"{title} · {user_turns} turns"
+
+
+def _ensure_chat_history_ui_state():
+    if "chat_history_expanded" not in st.session_state:
+        st.session_state.chat_history_expanded = False
+
+
+def _visible_chat_sessions():
+    sessions = st.session_state.chat_sessions
+    if st.session_state.get("chat_history_expanded") or len(sessions) <= 8:
+        return sessions
+
+    visible = sessions[:8]
+    active_id = st.session_state.get("active_chat_id")
+    if active_id and not any(chat.get("id") == active_id for chat in visible):
+        active_chat = next((chat for chat in sessions if chat.get("id") == active_id), None)
+        if active_chat is not None:
+            visible = visible[:-1] + [active_chat]
+    return visible
+
+
+def _inject_sidebar_styles():
+    st.markdown(
+        """
+        <style>
+        section[data-testid="stSidebar"] {
+            background: linear-gradient(180deg, rgba(10, 14, 24, 0.98) 0%, rgba(13, 18, 30, 0.99) 100%);
+        }
+
+        section[data-testid="stSidebar"] div.stButton > button {
+            width: 100%;
+            text-align: left;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.03);
+            color: rgba(245, 247, 250, 0.96);
+            padding: 0.62rem 0.78rem;
+            min-height: 2.65rem;
+            box-shadow: none;
+            font-weight: 500;
+        }
+
+        section[data-testid="stSidebar"] div.stButton > button:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: rgba(255, 255, 255, 0.14);
+        }
+
+        section[data-testid="stSidebar"] div.stButton > button[kind="primary"] {
+            background: linear-gradient(180deg, rgba(66, 84, 128, 0.92) 0%, rgba(42, 56, 92, 0.92) 100%);
+            border-color: rgba(150, 173, 255, 0.36);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(91, 113, 168, 0.16);
+            color: #f8fbff;
+        }
+
+        section[data-testid="stSidebar"] div.stButton > button[kind="primary"]:hover {
+            background: linear-gradient(180deg, rgba(76, 95, 144, 0.98) 0%, rgba(49, 65, 106, 0.98) 100%);
+            border-color: rgba(170, 188, 255, 0.42);
+        }
+
+        section[data-testid="stSidebar"] div.stButton > button:focus-visible {
+            outline: 2px solid rgba(160, 182, 255, 0.55);
+            box-shadow: none;
+        }
+
+        section[data-testid="stSidebar"] .chat-history-row {
+            margin-bottom: 0.2rem;
+        }
+
+        section[data-testid="stSidebar"] .chat-history-meta {
+            display: none;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_chat_history_sidebar():
+    if st.button("+ New Chat", use_container_width=True):
+        _create_new_chat()
+
+    visible_sessions = _visible_chat_sessions()
+
+    for chat in visible_sessions:
+        chat_id = chat["id"]
+        is_active = chat_id == st.session_state.active_chat_id
+        is_menu_open = st.session_state.get("chat_action_chat_id") == chat_id
+        is_renaming = st.session_state.get("chat_rename_chat_id") == chat_id
+        title = chat.get("title", "New Chat")
+
+        row_cols = st.columns([0.86, 0.14], gap="small")
+        with row_cols[0]:
+            if st.button(
+                f"• {title}" if is_active else title,
+                key=f"open_chat_{chat_id}",
+                use_container_width=True,
+                type="primary" if is_active else "secondary",
+            ):
+                _set_active_chat(chat_id)
+                st.rerun()
+        with row_cols[1]:
+            if st.button("⋮", key=f"menu_chat_{chat_id}", use_container_width=True):
+                _toggle_chat_menu(chat_id)
+                st.rerun()
+
+        if is_menu_open:
+            action_cols = st.columns(2)
+            with action_cols[0]:
+                if st.button("Rename", key=f"rename_action_{chat_id}", use_container_width=True):
+                    _begin_rename_chat(chat_id)
+                    st.rerun()
+            with action_cols[1]:
+                if st.button("Delete", key=f"delete_action_{chat_id}", use_container_width=True):
+                    _delete_chat_and_select(chat_id)
+
+        if is_renaming:
+            st.text_input(
+                "Rename chat",
+                key=f"rename_title_{chat_id}",
+                label_visibility="collapsed",
+            )
+            save_cols = st.columns(2)
+            with save_cols[0]:
+                if st.button("Save", key=f"save_rename_{chat_id}", use_container_width=True):
+                    _save_renamed_chat(chat_id)
+            with save_cols[1]:
+                if st.button("Cancel", key=f"cancel_rename_{chat_id}", use_container_width=True):
+                    st.session_state.chat_rename_chat_id = None
+                    st.session_state.chat_action_chat_id = None
+                    st.rerun()
+
+    if len(st.session_state.chat_sessions) > 8:
+        if st.session_state.get("chat_history_expanded"):
+            if st.button("Show less history", use_container_width=True, key="collapse_chat_history"):
+                st.session_state.chat_history_expanded = False
+                st.rerun()
+        else:
+            remaining = len(st.session_state.chat_sessions) - len(visible_sessions)
+            if st.button(f"Show more history (+{remaining})", use_container_width=True, key="expand_chat_history"):
+                st.session_state.chat_history_expanded = True
+                st.rerun()
+
+
 def _utc_now_iso():
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
 
@@ -151,6 +360,7 @@ def _utc_now_iso():
 st.set_page_config(page_title="Enterprise RAG HUD", layout="wide", page_icon="🏢")
 
 _ensure_chat_state()
+_inject_sidebar_styles()
 
 # --- SIDEBAR: THE "HUD" ---
 with st.sidebar:
@@ -201,29 +411,13 @@ with st.sidebar:
     st.divider()
 
     st.subheader(" Chat History")
-    st.caption("Pick a saved chat or start a new thread.")
-    chat_ids = [chat["id"] for chat in st.session_state.chat_sessions]
-    selected_chat_id = st.selectbox(
-        "Saved chats",
-        chat_ids,
-        index=_active_chat_index(),
-        format_func=lambda chat_id: _chat_label(get_chat_session(chat_id) or {"title": "New Chat", "messages": []}),
-        key="chat_history_selector",
-    )
+    _ensure_chat_history_ui_state()
+    _render_chat_history_sidebar()
 
-    if selected_chat_id != st.session_state.active_chat_id:
-        _set_active_chat(selected_chat_id)
-        st.rerun()
-
-    col_new, col_clear = st.columns(2)
-    with col_new:
-        if st.button("+ New Chat", use_container_width=True):
-            _create_new_chat()
+    col_clear = st.columns(1)[0]
     with col_clear:
         if st.button("🧹 Clear Chat", use_container_width=True):
             _clear_current_chat()
-
-    st.caption(f"Active chat ID: `{st.session_state.active_chat_id[:8]}`")
 
     st.divider()
 

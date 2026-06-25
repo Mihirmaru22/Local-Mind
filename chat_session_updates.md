@@ -119,3 +119,8 @@ The existing prompt hardening notes from the earlier documentation are still rel
 - Existing retrieval and memory behavior remain unchanged.
 - Missing new metadata fields are handled gracefully.
 - Old session files continue to load and save without requiring a migration step.
+
+## 10. Fix the Chat history ui 
+- In old ui after click on "New chat" you have to select menually new chat from dropsown
+- After update, "New chat" will bring you to new chat 
+- Now you can delete and rename then chat

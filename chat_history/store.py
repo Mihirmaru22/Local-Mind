@@ -133,6 +133,27 @@ def create_chat_session(title: str = "New Chat") -> Dict[str, Any]:
     return session
 
 
+def rename_chat_session(session_id: str, title: str) -> Optional[Dict[str, Any]]:
+    cleaned_title = " ".join(title.strip().split())
+    if not cleaned_title:
+        return None
+
+    sessions = load_all_chat_sessions()
+    target = None
+    for session in sessions:
+        if session.get("id") == session_id:
+            target = session
+            break
+
+    if target is None or _is_hidden_session(target):
+        return None
+
+    target["title"] = cleaned_title
+    target["updated_at"] = _now_iso()
+    save_chat_sessions(sessions)
+    return target
+
+
 def get_chat_session(session_id: str) -> Optional[Dict[str, Any]]:
     for session in load_chat_sessions():
         if session.get("id") == session_id:
